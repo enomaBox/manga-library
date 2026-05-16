@@ -189,6 +189,10 @@ function safeUrl(u) {
   if (!u) return '';
   try { const p = new URL(u).protocol; return (p==='https:'||p==='http:') ? u : ''; } catch { return ''; }
 }
+function safeThumbDataUri(u) {
+  const v = String(u ?? '').trim();
+  return /^data:image\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/i.test(v) ? v : '';
+}
 function relTime(iso) {
   const t = Date.parse(iso); if (!t) return '';
   const d = Date.now()-t, m = Math.floor(d/60000);
@@ -241,8 +245,8 @@ function renderCard(row) {
                 : row.series === 'ongoing' ? '<span class="badge b-ongoing">연재중</span>'
                 : '';
 
-  // 썸네일: wsrv.nl 프록시 경유
-  const thumbUrl = proxyThumb(meta?.thumbnail);
+  // 썸네일: 저장된 data URI 우선, 없으면 wsrv.nl 프록시 폴백
+  const thumbUrl = safeThumbDataUri(meta?.thumbData) || proxyThumb(meta?.thumbnail);
   const thumbHtml = thumbUrl
     ? `<div class="thumb-wrap"><img class="thumb" src="${esc(thumbUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.outerHTML='<div class=thumb-empty>📖</div>'"></div>`
     : `<div class="thumb-empty">📖</div>`;
