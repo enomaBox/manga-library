@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<!-- manga-smooth-scroll 라이브러리 뷰어 — Supabase REST API 직접 조회, 인증 정보는 localStorage 보관 -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="만화 라이브러리">
+<title>만화 라이브러리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f4f5;--card:#fff;--fg:#1a1a1a;--sub:#71717a;
+  --line:#e4e4e7;--accent:#2563eb;--accent2:#1d4ed8;
+  --danger:#dc2626;
+  --st-reading:#16a34a;--st-paused:#ea580c;--st-done:#6b7280;
+  --b-completed:#7c3aed;--b-ongoing:#0891b2;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#18181b;--card:#27272a;--fg:#f4f4f5;--sub:#a1a1aa;
+  --line:#3f3f46;--accent:#60a5fa;--accent2:#93c5fd;
+}}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo",sans-serif;
+  padding:0 12px env(safe-area-inset-bottom);
+  max-width:720px;margin:0 auto;min-height:100dvh;
+}
+
+/* ── 설정 화면 ── */
+#setup{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  min-height:100dvh;gap:20px;padding:24px 0;
+}
+.setup-box{
+  width:100%;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;
+}
+.setup-box h1{font-size:20px;font-weight:700}
+.setup-box p{font-size:14px;color:var(--sub);line-height:1.5}
+label{font-size:13px;font-weight:600;color:var(--sub);display:block;margin-bottom:6px}
+input[type=text],input[type=password]{
+  width:100%;padding:11px 14px;font-size:14px;font-family:inherit;
+  border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--fg);outline:none;
+}
+input[type=text]:focus,input[type=password]:focus{border-color:var(--accent)}
+.btn{
+  padding:12px;font-size:15px;font-weight:600;font-family:inherit;
+  background:var(--accent);color:#fff;border:none;border-radius:10px;
+  cursor:pointer;text-align:center;
+}
+.btn:active{background:var(--accent2)}
+.btn-ghost{
+  background:none;color:var(--sub);border:1px solid var(--line);
+  padding:10px;font-size:13px;font-weight:500;font-family:inherit;
+  border-radius:10px;cursor:pointer;
+}
+.btn-ghost:active{color:var(--danger);border-color:var(--danger)}
+.err-msg{font-size:13px;color:var(--danger);min-height:18px}
+
+/* ── 메인 화면 ── */
+#main{display:none}
+header{
+  position:sticky;top:0;background:var(--bg);
+  padding:14px 0 10px;z-index:10;
+  border-bottom:1px solid var(--line);
+}
+.hdr-top{display:flex;align-items:center;gap:8px}
+h1{font-size:19px;font-weight:700;flex:1}
+.icon-btn{
+  background:none;border:none;cursor:pointer;color:var(--sub);
+  font-size:20px;padding:4px;line-height:1;
+}
+.icon-btn:active{color:var(--accent)}
+.stat{color:var(--sub);font-size:13px;margin-top:2px}
+.search{
+  width:100%;margin-top:10px;padding:10px 14px;font-size:15px;
+  border:1px solid var(--line);border-radius:10px;
+  background:var(--card);color:var(--fg);outline:none;
+  font-family:inherit;
+}
+.search:focus{border-color:var(--accent)}
+
+.list{padding:12px 0 40px;display:flex;flex-direction:column;gap:10px}
+
+/* ── 카드 ── */
+.card{
+  display:flex;gap:12px;background:var(--card);
+  border-radius:12px;padding:12px;border:1px solid var(--line);
+  text-decoration:none;color:inherit;
+}
+.thumb{
+  width:60px;height:80px;object-fit:cover;border-radius:8px;
+  flex-shrink:0;background:var(--line);
+}
+.thumb-empty{
+  width:60px;height:80px;flex-shrink:0;border-radius:8px;
+  background:var(--line);display:flex;align-items:center;
+  justify-content:center;font-size:26px;
+}
+.info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.title-row{display:flex;align-items:center;gap:5px}
+.pin{font-size:13px}
+.title{
+  font-size:15px;font-weight:600;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.meta-row,.sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chapter{font-size:14px;font-weight:600;color:var(--accent)}
+.badge{
+  font-size:11px;font-weight:600;padding:2px 7px;
+  border-radius:6px;color:#fff;white-space:nowrap;
+}
+.st-reading{background:var(--st-reading)}
+.st-paused{background:var(--st-paused)}
+.st-done{background:var(--st-done)}
+.b-completed{background:var(--b-completed)}
+.b-ongoing{background:var(--b-ongoing)}
+.sub-row{font-size:12px;color:var(--sub)}
+.links{display:flex;gap:6px;flex-wrap:wrap}
+.site-link{
+  color:var(--sub);border:1px solid var(--line);
+  padding:1px 6px;border-radius:5px;font-size:11px;
+  text-decoration:none;
+}
+.site-link:active{color:var(--accent);border-color:var(--accent)}
+
+.empty,.no-match,.loading{
+  text-align:center;color:var(--sub);padding:60px 0;font-size:14px;
+}
+.no-match{display:none}
+</style>
+</head>
+<body>
+
+<!-- 설정 화면 -->
+<div id="setup">
+  <div class="setup-box">
+    <h1>📚 만화 라이브러리 설정</h1>
+    <p>Supabase 프로젝트 URL과 anon key를 입력하세요.<br>
+       입력 정보는 이 기기의 브라우저에만 저장됩니다.</p>
+    <div>
+      <label for="inp-url">Supabase 프로젝트 URL</label>
+      <input id="inp-url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false">
+    </div>
+    <div>
+      <label for="inp-key">Anon Key</label>
+      <input id="inp-key" type="password" placeholder="eyJhbGciOi..." autocomplete="off">
+    </div>
+    <div class="err-msg" id="setup-err"></div>
+    <button class="btn" id="setup-save">저장하고 시작</button>
+  </div>
+</div>
+
+<!-- 메인 라이브러리 화면 -->
+<div id="main">
+  <header>
+    <div class="hdr-top">
+      <h1>📚 만화 라이브러리</h1>
+      <button class="icon-btn" id="btn-refresh" title="새로고침">↺</button>
+      <button class="icon-btn" id="btn-settings" title="설정">⚙</button>
+    </div>
+    <div class="stat" id="stat"></div>
+    <input class="search" type="search" id="search" placeholder="제목 검색" autocomplete="off">
+  </header>
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+const STORE_URL = 'mss_supabase_url';
+const STORE_KEY = 'mss_supabase_key';
+const SYNC_KEY  = '__mss_sync';
+const META_KEY  = '__mss_meta';
+
+// ── 유틸 ──────────────────────────────────────
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// https:/http: 이외 프로토콜(javascript: 등)은 빈 문자열로 치환
+function safeUrl(u) {
+  if (!u) return '';
+  try {
+    const p = new URL(u).protocol;
+    return (p === 'https:' || p === 'http:') ? u : '';
+  } catch { return ''; }
+}
+
+function relTime(iso) {
+  const t = Date.parse(iso);
+  if (!t) return '';
+  const d = Date.now() - t, m = Math.floor(d/60000);
+  if (m < 1)  return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}시간 전`;
+  const day = Math.floor(h/24);
+  if (day < 30) return `${day}일 전`;
+  return new Date(t).toISOString().slice(0,10);
+}
+
+function statusBadge(s) {
+  if (s === 'paused') return '<span class="badge st-paused">중단</span>';
+  if (s === 'done')   return '<span class="badge st-done">완료</span>';
+  return '<span class="badge st-reading">읽는 중</span>';
+}
+
+function visibleSites(sites) {
+  if (!sites || typeof sites !== 'object') return [];
+  return Object.entries(sites).filter(([k]) => k !== SYNC_KEY && !k.startsWith('__'));
+}
+
+function extractMeta(sites) {
+  const m = sites?.[META_KEY];
+  return m && typeof m === 'object' ? m : null;
+}
+
+// ── 카드 렌더 ──────────────────────────────────
+function renderCard(row) {
+  const meta   = extractMeta(row.sites);
+  const sv     = visibleSites(row.sites);
+
+  // 가장 최근에 업데이트된 사이트를 대표 링크로
+  const primary = sv.slice().sort((a,b) =>
+    Date.parse(b[1]?.updatedAt||'') - Date.parse(a[1]?.updatedAt||'')
+  )[0];
+  const href = primary?.[1]?.url || meta?.listUrl || '';
+
+  const total      = meta?.totalChapters;
+  const chapterTxt = total ? `${row.chapter} / ${total}화` : `${row.chapter}화`;
+  const seriesBadge = row.series === 'completed' || meta?.isCompleted
+    ? '<span class="badge b-completed">완결</span>'
+    : row.series === 'ongoing'
+    ? '<span class="badge b-ongoing">연재중</span>'
+    : '';
+
+  const thumbSrc = safeUrl(meta?.thumbnail);
+  const thumb = thumbSrc
+    ? `<img class="thumb" src="${esc(thumbSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const thumbFallback = `<div class="thumb-empty" style="${meta?.thumbnail?'display:none':''}">📖</div>`;
+
+  const links = sv.map(([id, info]) => {
+    const u = safeUrl(info?.url);
+    return u ? `<a class="site-link" href="${esc(u)}" target="_blank" rel="noopener">${esc(id)}</a>` : '';
+  }).join('');
+
+  const pin = row.pinned ? '<span class="pin">📌</span>' : '';
+  const safeHref = safeUrl(href);
+  const titleEl = safeHref
+    ? `<a class="title" href="${esc(safeHref)}" target="_blank" rel="noopener">${esc(row.title)}</a>`
+    : `<span class="title">${esc(row.title)}</span>`;
+
+  return `
+<div class="card" data-title="${esc(row.title.toLowerCase())}" data-status="${esc(row.status)}">
+  ${thumb}${thumbFallback}
+  <div class="info">
+    <div class="title-row">${pin}${titleEl}</div>
+    <div class="meta-row">
+      <span class="chapter">${esc(chapterTxt)}</span>
+      ${statusBadge(row.status)}${seriesBadge}
+    </div>
+    <div class="sub-row">
+      <span class="time">${esc(relTime(row.last_read))}</span>
+      <span class="links">${links}</span>
+    </div>
+  </div>
+</div>`;
+}
+
+// ── Supabase fetch ─────────────────────────────
+async function fetchLibrary(url, key) {
+  const res = await fetch(
+    `${url.replace(/\/+$/,'')}/rest/v1/manga_reading?select=*&order=pinned.desc,last_read.desc`,
+    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── 메인 화면 ─────────────────────────────────
+async function loadLibrary() {
+  const url = localStorage.getItem(STORE_URL);
+  const key = localStorage.getItem(STORE_KEY);
+
+  const listEl = document.getElementById('list');
+  const statEl = document.getElementById('stat');
+
+  listEl.innerHTML = '<div class="loading">불러오는 중...</div>';
+  statEl.textContent = '';
+
+  let rows;
+  try {
+    rows = await fetchLibrary(url, key);
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">불러오기 실패: ${esc(e.message)}<br><small>Supabase URL/Key를 확인하세요.</small></div>`;
+    return;
+  }
+
+  const reading = rows.filter(r => r.status === 'reading').length;
+  statEl.textContent = `전체 ${rows.length}편 · 읽는 중 ${reading}편`;
+
+  if (rows.length === 0) {
+    listEl.innerHTML = '<div class="empty">저장된 작품이 없습니다.</div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map(renderCard).join('') +
+    '<div class="no-match" id="no-match">검색 결과가 없습니다.</div>';
+
+  // 검색
+  const searchEl = document.getElementById('search');
+  searchEl.value = '';
+  searchEl.oninput = () => {
+    const v = searchEl.value.trim().toLowerCase();
+    const cards = listEl.querySelectorAll('.card');
+    let shown = 0;
+    cards.forEach(c => {
+      const hit = !v || c.dataset.title.includes(v);
+      c.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    const nm = document.getElementById('no-match');
+    if (nm) nm.style.display = (cards.length && !shown) ? 'block' : 'none';
+  };
+}
+
+function showMain() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  loadLibrary();
+}
+
+function showSetup(prefill) {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('setup').style.display = 'flex';
+  if (prefill) {
+    document.getElementById('inp-url').value = localStorage.getItem(STORE_URL) || '';
+    document.getElementById('inp-key').value = localStorage.getItem(STORE_KEY) || '';
+  }
+}
+
+// ── 설정 저장 ──────────────────────────────────
+document.getElementById('setup-save').addEventListener('click', async () => {
+  const url = document.getElementById('inp-url').value.trim();
+  const key = document.getElementById('inp-key').value.trim();
+  const errEl = document.getElementById('setup-err');
+
+  if (!url || !key) { errEl.textContent = 'URL과 Key를 모두 입력하세요.'; return; }
+  if (!url.startsWith('https://')) { errEl.textContent = 'URL은 https://로 시작해야 합니다.'; return; }
+  errEl.textContent = '연결 확인 중...';
+
+  try {
+    await fetchLibrary(url, key);
+  } catch (e) {
+    errEl.textContent = `연결 실패: ${e.message}. URL/Key를 확인하세요.`;
+    return;
+  }
+
+  localStorage.setItem(STORE_URL, url);
+  localStorage.setItem(STORE_KEY, key);
+  errEl.textContent = '';
+  showMain();
+});
+
+// ── 버튼 이벤트 ────────────────────────────────
+document.getElementById('btn-refresh').addEventListener('click', loadLibrary);
+document.getElementById('btn-settings').addEventListener('click', () => showSetup(true));
+
+// ── 엔트리포인트 ───────────────────────────────
+if (localStorage.getItem(STORE_URL) && localStorage.getItem(STORE_KEY)) {
+  showMain();
+} else {
+  showSetup(false);
+}
+</script>
+</body>
+</html>
