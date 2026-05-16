@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- manga-smooth-scroll 라이브러리 뷰어 — Supabase REST API 직접 조회, 인증 정보는 localStorage 보관 -->
+<!-- manga-smooth-scroll 라이브러리 뷰어 — 인증 정보는 localStorage 보관, 데이터는 Supabase REST 직접 조회 -->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -26,112 +26,92 @@ body{
   background:var(--bg);color:var(--fg);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo",sans-serif;
   padding:0 12px env(safe-area-inset-bottom);
-  max-width:720px;margin:0 auto;min-height:100dvh;
+  max-width:720px;margin:0 auto;min-height:100dvh;overflow-x:hidden;
 }
 
 /* ── 설정 화면 ── */
-#setup{
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  min-height:100dvh;gap:20px;padding:24px 0;
-}
-.setup-box{
-  width:100%;background:var(--card);border:1px solid var(--line);
-  border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;
-}
+#setup{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:100dvh;gap:20px;padding:24px 0}
+.setup-box{width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
 .setup-box h1{font-size:20px;font-weight:700}
 .setup-box p{font-size:14px;color:var(--sub);line-height:1.5}
 label{font-size:13px;font-weight:600;color:var(--sub);display:block;margin-bottom:6px}
-input[type=text],input[type=password]{
-  width:100%;padding:11px 14px;font-size:14px;font-family:inherit;
-  border:1px solid var(--line);border-radius:10px;
-  background:var(--bg);color:var(--fg);outline:none;
-}
+input[type=text],input[type=password]{width:100%;padding:11px 14px;font-size:14px;font-family:inherit;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);outline:none}
 input[type=text]:focus,input[type=password]:focus{border-color:var(--accent)}
-.btn{
-  padding:12px;font-size:15px;font-weight:600;font-family:inherit;
-  background:var(--accent);color:#fff;border:none;border-radius:10px;
-  cursor:pointer;text-align:center;
-}
+.btn{padding:12px;font-size:15px;font-weight:600;font-family:inherit;background:var(--accent);color:#fff;border:none;border-radius:10px;cursor:pointer}
 .btn:active{background:var(--accent2)}
-.btn-ghost{
-  background:none;color:var(--sub);border:1px solid var(--line);
-  padding:10px;font-size:13px;font-weight:500;font-family:inherit;
-  border-radius:10px;cursor:pointer;
-}
-.btn-ghost:active{color:var(--danger);border-color:var(--danger)}
+.btn-ghost{background:none;color:var(--sub);border:1px solid var(--line);padding:9px 14px;font-size:13px;font-weight:500;font-family:inherit;border-radius:10px;cursor:pointer}
 .err-msg{font-size:13px;color:var(--danger);min-height:18px}
 
 /* ── 메인 화면 ── */
 #main{display:none}
-header{
-  position:sticky;top:0;background:var(--bg);
-  padding:14px 0 10px;z-index:10;
-  border-bottom:1px solid var(--line);
-}
-.hdr-top{display:flex;align-items:center;gap:8px}
-h1{font-size:19px;font-weight:700;flex:1}
-.icon-btn{
-  background:none;border:none;cursor:pointer;color:var(--sub);
-  font-size:20px;padding:4px;line-height:1;
-}
+
+/* 헤더 */
+header{position:sticky;top:0;background:var(--bg);padding:12px 0 0;z-index:20;border-bottom:1px solid var(--line)}
+.hdr-top{display:flex;align-items:center;gap:6px}
+h1{font-size:18px;font-weight:700;flex:1}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--sub);font-size:20px;padding:6px;line-height:1}
 .icon-btn:active{color:var(--accent)}
-.stat{color:var(--sub);font-size:13px;margin-top:2px}
-.search{
-  width:100%;margin-top:10px;padding:10px 14px;font-size:15px;
-  border:1px solid var(--line);border-radius:10px;
-  background:var(--card);color:var(--fg);outline:none;
-  font-family:inherit;
-}
+.stat{color:var(--sub);font-size:12px;margin:4px 0 8px}
+
+/* 필터 탭 */
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;font-size:13px;font-weight:600;font-family:inherit;border:1.5px solid var(--line);border-radius:20px;background:none;color:var(--sub);cursor:pointer}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* 정렬/완결 툴바 */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.sort-btns{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sort-btn{padding:5px 12px;font-size:12px;font-weight:600;font-family:inherit;background:none;color:var(--sub);border:none;cursor:pointer}
+.sort-btn.active{background:var(--accent);color:#fff}
+.sort-btn+.sort-btn{border-left:1px solid var(--line)}
+.chip{padding:5px 12px;font-size:12px;font-weight:600;font-family:inherit;border:1.5px solid var(--line);border-radius:20px;background:none;color:var(--sub);cursor:pointer}
+.chip.active{border-color:var(--b-completed);color:var(--b-completed)}
+
+/* 검색 */
+.search{width:100%;padding:9px 14px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);outline:none;font-family:inherit;margin-bottom:10px}
 .search:focus{border-color:var(--accent)}
 
-.list{padding:12px 0 40px;display:flex;flex-direction:column;gap:10px}
+/* Pull-to-refresh */
+#ptr{height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:22px;transition:height .15s}
+#ptr.active{height:48px}
 
-/* ── 카드 ── */
-.card{
-  display:flex;gap:12px;background:var(--card);
-  border-radius:12px;padding:12px;border:1px solid var(--line);
-  text-decoration:none;color:inherit;
-}
-.thumb{
-  width:60px;height:80px;object-fit:cover;border-radius:8px;
-  flex-shrink:0;background:var(--line);
-}
-.thumb-empty{
-  width:60px;height:80px;flex-shrink:0;border-radius:8px;
-  background:var(--line);display:flex;align-items:center;
-  justify-content:center;font-size:26px;
-}
+/* 카드 리스트 */
+.list{padding:4px 0 40px;display:flex;flex-direction:column;gap:10px}
+.card{display:flex;gap:12px;background:var(--card);border-radius:12px;padding:12px;border:1px solid var(--line)}
+.thumb-wrap{width:60px;height:80px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--line)}
+.thumb{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-empty{width:60px;height:80px;flex-shrink:0;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:26px}
 .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .title-row{display:flex;align-items:center;gap:5px}
-.pin{font-size:13px}
-.title{
-  font-size:15px;font-weight:600;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;
-}
-.meta-row,.sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.chapter{font-size:14px;font-weight:600;color:var(--accent)}
-.badge{
-  font-size:11px;font-weight:600;padding:2px 7px;
-  border-radius:6px;color:#fff;white-space:nowrap;
-}
+.pin{font-size:12px}
+.title{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;color:var(--fg)}
+a.title:active{color:var(--accent)}
+.meta-row,.sub-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chapter{font-size:14px;font-weight:700;color:var(--accent)}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;color:#fff;white-space:nowrap}
 .st-reading{background:var(--st-reading)}
 .st-paused{background:var(--st-paused)}
 .st-done{background:var(--st-done)}
 .b-completed{background:var(--b-completed)}
 .b-ongoing{background:var(--b-ongoing)}
 .sub-row{font-size:12px;color:var(--sub)}
-.links{display:flex;gap:6px;flex-wrap:wrap}
-.site-link{
-  color:var(--sub);border:1px solid var(--line);
-  padding:1px 6px;border-radius:5px;font-size:11px;
-  text-decoration:none;
-}
+.links{display:flex;gap:5px;flex-wrap:wrap}
+.site-link{color:var(--sub);border:1px solid var(--line);padding:1px 7px;border-radius:5px;font-size:11px;text-decoration:none}
 .site-link:active{color:var(--accent);border-color:var(--accent)}
+.empty,.no-match,.loading{text-align:center;color:var(--sub);padding:60px 0;font-size:14px}
 
-.empty,.no-match,.loading{
-  text-align:center;color:var(--sub);padding:60px 0;font-size:14px;
-}
-.no-match{display:none}
+/* ── 통계 모달 ── */
+#stats-modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5);align-items:flex-end}
+#stats-modal.open{display:flex}
+.stats-sheet{background:var(--card);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:720px;margin:0 auto}
+.stats-sheet h2{font-size:17px;font-weight:700;margin-bottom:16px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:var(--bg);border-radius:12px;padding:14px}
+.stat-card .num{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-card .lbl{font-size:12px;color:var(--sub);margin-top:2px}
+.stat-card.full{grid-column:1/-1}
+.modal-close{width:100%;margin-top:16px}
 </style>
 </head>
 <body>
@@ -140,8 +120,7 @@ h1{font-size:19px;font-weight:700;flex:1}
 <div id="setup">
   <div class="setup-box">
     <h1>📚 만화 라이브러리 설정</h1>
-    <p>Supabase 프로젝트 URL과 anon key를 입력하세요.<br>
-       입력 정보는 이 기기의 브라우저에만 저장됩니다.</p>
+    <p>Supabase 프로젝트 URL과 anon key를 입력하세요.<br>입력 정보는 이 기기의 브라우저에만 저장됩니다.</p>
     <div>
       <label for="inp-url">Supabase 프로젝트 URL</label>
       <input id="inp-url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false">
@@ -155,44 +134,64 @@ h1{font-size:19px;font-weight:700;flex:1}
   </div>
 </div>
 
-<!-- 메인 라이브러리 화면 -->
+<!-- 메인 화면 -->
 <div id="main">
   <header>
     <div class="hdr-top">
       <h1>📚 만화 라이브러리</h1>
+      <button class="icon-btn" id="btn-stats" title="통계">📊</button>
       <button class="icon-btn" id="btn-refresh" title="새로고침">↺</button>
       <button class="icon-btn" id="btn-settings" title="설정">⚙</button>
     </div>
     <div class="stat" id="stat"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-status="all">전체</button>
+      <button class="tab" data-status="reading">읽는 중</button>
+      <button class="tab" data-status="paused">중단</button>
+      <button class="tab" data-status="done">완료</button>
+    </div>
+    <div class="toolbar">
+      <div class="sort-btns">
+        <button class="sort-btn active" data-sort="recent">최근</button>
+        <button class="sort-btn" data-sort="title">제목</button>
+        <button class="sort-btn" data-sort="chapter">화수</button>
+      </div>
+      <button class="chip" id="chip-completed">완결만</button>
+    </div>
     <input class="search" type="search" id="search" placeholder="제목 검색" autocomplete="off">
   </header>
+
+  <div id="ptr">↓</div>
   <div class="list" id="list"></div>
 </div>
 
+<!-- 통계 모달 -->
+<div id="stats-modal">
+  <div class="stats-sheet">
+    <h2>📊 라이브러리 통계</h2>
+    <div class="stat-grid" id="stat-grid"></div>
+    <button class="btn modal-close" id="stats-close">닫기</button>
+  </div>
+</div>
+
 <script>
-const STORE_URL = 'mss_supabase_url';
-const STORE_KEY = 'mss_supabase_key';
-const SYNC_KEY  = '__mss_sync';
-const META_KEY  = '__mss_meta';
+const STORE_URL   = 'mss_supabase_url';
+const STORE_KEY   = 'mss_supabase_key';
+const STORE_CACHE = 'mss_cache';
+const META_KEY    = '__mss_meta';
+const SYNC_KEY    = '__mss_sync';
 
-// ── 유틸 ──────────────────────────────────────
+// ── 유틸 ──────────────────────────────────────────────────────────────
 function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-
-// https:/http: 이외 프로토콜(javascript: 등)은 빈 문자열로 치환
 function safeUrl(u) {
   if (!u) return '';
-  try {
-    const p = new URL(u).protocol;
-    return (p === 'https:' || p === 'http:') ? u : '';
-  } catch { return ''; }
+  try { const p = new URL(u).protocol; return (p==='https:'||p==='http:') ? u : ''; } catch { return ''; }
 }
-
 function relTime(iso) {
-  const t = Date.parse(iso);
-  if (!t) return '';
-  const d = Date.now() - t, m = Math.floor(d/60000);
+  const t = Date.parse(iso); if (!t) return '';
+  const d = Date.now()-t, m = Math.floor(d/60000);
   if (m < 1)  return '방금 전';
   if (m < 60) return `${m}분 전`;
   const h = Math.floor(m/60);
@@ -201,78 +200,98 @@ function relTime(iso) {
   if (day < 30) return `${day}일 전`;
   return new Date(t).toISOString().slice(0,10);
 }
-
-function statusBadge(s) {
-  if (s === 'paused') return '<span class="badge st-paused">중단</span>';
-  if (s === 'done')   return '<span class="badge st-done">완료</span>';
-  return '<span class="badge st-reading">읽는 중</span>';
-}
-
 function visibleSites(sites) {
   if (!sites || typeof sites !== 'object') return [];
   return Object.entries(sites).filter(([k]) => k !== SYNC_KEY && !k.startsWith('__'));
 }
-
 function extractMeta(sites) {
   const m = sites?.[META_KEY];
   return m && typeof m === 'object' ? m : null;
 }
+function isCompletedRow(row) {
+  const meta = extractMeta(row.sites);
+  return row.series === 'completed' || !!meta?.isCompleted;
+}
+// wsrv.nl 프록시로 썸네일 URL 변환 — 망가 사이트 핫링크 차단 우회
+function proxyThumb(url) {
+  const safe = safeUrl(url); if (!safe) return '';
+  return 'https://wsrv.nl/?url=' + encodeURIComponent(safe) + '&w=120&h=160&fit=cover&output=webp';
+}
 
-// ── 카드 렌더 ──────────────────────────────────
+// ── 상태 ──────────────────────────────────────────────────────────────
+let allRows = [];
+let activeStatus = 'all';
+let activeSort   = 'recent';
+let onlyComplete = false;
+
+// ── 카드 렌더 ──────────────────────────────────────────────────────────
 function renderCard(row) {
-  const meta   = extractMeta(row.sites);
-  const sv     = visibleSites(row.sites);
+  const meta    = extractMeta(row.sites);
+  const sv      = visibleSites(row.sites);
+  const primary = sv.slice().sort((a,b) => Date.parse(b[1]?.updatedAt||'') - Date.parse(a[1]?.updatedAt||''))[0];
+  const href    = safeUrl(primary?.[1]?.url || meta?.listUrl || '');
 
-  // 가장 최근에 업데이트된 사이트를 대표 링크로
-  const primary = sv.slice().sort((a,b) =>
-    Date.parse(b[1]?.updatedAt||'') - Date.parse(a[1]?.updatedAt||'')
-  )[0];
-  const href = primary?.[1]?.url || meta?.listUrl || '';
+  const total   = meta?.totalChapters;
+  const chTxt   = total ? `${row.chapter} / ${total}화` : `${row.chapter}화`;
 
-  const total      = meta?.totalChapters;
-  const chapterTxt = total ? `${row.chapter} / ${total}화` : `${row.chapter}화`;
-  const seriesBadge = row.series === 'completed' || meta?.isCompleted
-    ? '<span class="badge b-completed">완결</span>'
-    : row.series === 'ongoing'
-    ? '<span class="badge b-ongoing">연재중</span>'
-    : '';
+  const stBadge = row.status === 'paused' ? '<span class="badge st-paused">중단</span>'
+                : row.status === 'done'   ? '<span class="badge st-done">완료</span>'
+                :                           '<span class="badge st-reading">읽는 중</span>';
+  const seBadge = isCompletedRow(row)     ? '<span class="badge b-completed">완결</span>'
+                : row.series === 'ongoing' ? '<span class="badge b-ongoing">연재중</span>'
+                : '';
 
-  const thumbSrc = safeUrl(meta?.thumbnail);
-  const thumb = thumbSrc
-    ? `<img class="thumb" src="${esc(thumbSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-    : '';
-  const thumbFallback = `<div class="thumb-empty" style="${meta?.thumbnail?'display:none':''}">📖</div>`;
+  // 썸네일: wsrv.nl 프록시 경유
+  const thumbUrl = proxyThumb(meta?.thumbnail);
+  const thumbHtml = thumbUrl
+    ? `<div class="thumb-wrap"><img class="thumb" src="${esc(thumbUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.outerHTML='<div class=thumb-empty>📖</div>'"></div>`
+    : `<div class="thumb-empty">📖</div>`;
 
   const links = sv.map(([id, info]) => {
     const u = safeUrl(info?.url);
     return u ? `<a class="site-link" href="${esc(u)}" target="_blank" rel="noopener">${esc(id)}</a>` : '';
   }).join('');
 
-  const pin = row.pinned ? '<span class="pin">📌</span>' : '';
-  const safeHref = safeUrl(href);
-  const titleEl = safeHref
-    ? `<a class="title" href="${esc(safeHref)}" target="_blank" rel="noopener">${esc(row.title)}</a>`
+  const pin     = row.pinned ? '<span class="pin">📌</span>' : '';
+  const titleEl = href
+    ? `<a class="title" href="${esc(href)}" target="_blank" rel="noopener">${esc(row.title)}</a>`
     : `<span class="title">${esc(row.title)}</span>`;
 
   return `
-<div class="card" data-title="${esc(row.title.toLowerCase())}" data-status="${esc(row.status)}">
-  ${thumb}${thumbFallback}
+<div class="card">
+  ${thumbHtml}
   <div class="info">
     <div class="title-row">${pin}${titleEl}</div>
-    <div class="meta-row">
-      <span class="chapter">${esc(chapterTxt)}</span>
-      ${statusBadge(row.status)}${seriesBadge}
-    </div>
-    <div class="sub-row">
-      <span class="time">${esc(relTime(row.last_read))}</span>
-      <span class="links">${links}</span>
-    </div>
+    <div class="meta-row"><span class="chapter">${esc(chTxt)}</span>${stBadge}${seBadge}</div>
+    <div class="sub-row"><span class="time">${esc(relTime(row.last_read))}</span><span class="links">${links}</span></div>
   </div>
 </div>`;
 }
 
-// ── Supabase fetch ─────────────────────────────
-async function fetchLibrary(url, key) {
+// ── 필터 + 정렬 적용 ───────────────────────────────────────────────────
+function applyView() {
+  const listEl  = document.getElementById('list');
+  const statEl  = document.getElementById('stat');
+  const q       = document.getElementById('search').value.trim().toLowerCase();
+
+  let rows = allRows;
+  if (activeStatus !== 'all')  rows = rows.filter(r => r.status === activeStatus);
+  if (onlyComplete)            rows = rows.filter(r => isCompletedRow(r));
+  if (q)                       rows = rows.filter(r => r.title.toLowerCase().includes(q));
+
+  if (activeSort === 'title')   rows = [...rows].sort((a,b) => a.title.localeCompare(b.title,'ko'));
+  if (activeSort === 'chapter') rows = [...rows].sort((a,b) => b.chapter - a.chapter);
+
+  statEl.textContent = `전체 ${allRows.length}편 · 표시 ${rows.length}편`;
+  listEl.innerHTML = rows.length
+    ? rows.map(renderCard).join('')
+    : `<div class="empty">${q ? '검색 결과가 없습니다.' : '작품이 없습니다.'}</div>`;
+}
+
+// ── Supabase fetch ─────────────────────────────────────────────────────
+async function fetchLibrary() {
+  const url = localStorage.getItem(STORE_URL);
+  const key = localStorage.getItem(STORE_KEY);
   const res = await fetch(
     `${url.replace(/\/+$/,'')}/rest/v1/manga_reading?select=*&order=pinned.desc,last_read.desc`,
     { headers: { apikey: key, Authorization: `Bearer ${key}` } }
@@ -281,100 +300,151 @@ async function fetchLibrary(url, key) {
   return res.json();
 }
 
-// ── 메인 화면 ─────────────────────────────────
-async function loadLibrary() {
-  const url = localStorage.getItem(STORE_URL);
-  const key = localStorage.getItem(STORE_KEY);
-
+async function loadLibrary(fromCache = false) {
   const listEl = document.getElementById('list');
-  const statEl = document.getElementById('stat');
 
-  listEl.innerHTML = '<div class="loading">불러오는 중...</div>';
-  statEl.textContent = '';
+  // 캐시 우선 즉시 표시
+  if (fromCache) {
+    const cached = localStorage.getItem(STORE_CACHE);
+    if (cached) {
+      allRows = JSON.parse(cached);
+      applyView();
+    } else {
+      listEl.innerHTML = '<div class="loading">불러오는 중...</div>';
+    }
+  } else {
+    listEl.innerHTML = '<div class="loading">불러오는 중...</div>';
+  }
 
-  let rows;
   try {
-    rows = await fetchLibrary(url, key);
+    const rows = await fetchLibrary();
+    allRows = rows;
+    localStorage.setItem(STORE_CACHE, JSON.stringify(rows));
+    applyView();
   } catch (e) {
-    listEl.innerHTML = `<div class="empty">불러오기 실패: ${esc(e.message)}<br><small>Supabase URL/Key를 확인하세요.</small></div>`;
-    return;
+    if (!allRows.length) {
+      listEl.innerHTML = `<div class="empty">불러오기 실패: ${esc(e.message)}</div>`;
+    }
   }
-
-  const reading = rows.filter(r => r.status === 'reading').length;
-  statEl.textContent = `전체 ${rows.length}편 · 읽는 중 ${reading}편`;
-
-  if (rows.length === 0) {
-    listEl.innerHTML = '<div class="empty">저장된 작품이 없습니다.</div>';
-    return;
-  }
-
-  listEl.innerHTML = rows.map(renderCard).join('') +
-    '<div class="no-match" id="no-match">검색 결과가 없습니다.</div>';
-
-  // 검색
-  const searchEl = document.getElementById('search');
-  searchEl.value = '';
-  searchEl.oninput = () => {
-    const v = searchEl.value.trim().toLowerCase();
-    const cards = listEl.querySelectorAll('.card');
-    let shown = 0;
-    cards.forEach(c => {
-      const hit = !v || c.dataset.title.includes(v);
-      c.style.display = hit ? '' : 'none';
-      if (hit) shown++;
-    });
-    const nm = document.getElementById('no-match');
-    if (nm) nm.style.display = (cards.length && !shown) ? 'block' : 'none';
-  };
 }
 
-function showMain() {
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('main').style.display = 'block';
-  loadLibrary();
+// ── 통계 ────────────────────────────────────────────────────────────────
+function showStats() {
+  const rows  = allRows;
+  const total = rows.length;
+  if (!total) return;
+  const reading   = rows.filter(r => r.status === 'reading').length;
+  const paused    = rows.filter(r => r.status === 'paused').length;
+  const done      = rows.filter(r => r.status === 'done').length;
+  const completed = rows.filter(r => isCompletedRow(r)).length;
+  const pinned    = rows.filter(r => r.pinned).length;
+  const totalCh   = rows.reduce((s,r) => s + (r.chapter||0), 0);
+
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">전체</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--st-reading)">${reading}</div><div class="lbl">읽는 중</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--st-paused)">${paused}</div><div class="lbl">중단</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--st-done)">${done}</div><div class="lbl">완료</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--b-completed)">${completed}</div><div class="lbl">완결</div></div>
+    <div class="stat-card"><div class="num">${pinned}</div><div class="lbl">📌 고정</div></div>
+    <div class="stat-card full"><div class="num">${totalCh.toLocaleString()}</div><div class="lbl">총 읽은 화수</div></div>`;
+  document.getElementById('stats-modal').classList.add('open');
 }
 
-function showSetup(prefill) {
+// ── Pull-to-refresh ────────────────────────────────────────────────────
+(function() {
+  const ptr = document.getElementById('ptr');
+  let startY = 0, pulling = false, triggered = false;
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) { startY = e.touches[0].clientY; pulling = true; triggered = false; }
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 10) { ptr.classList.add('active'); }
+    if (dy > 80 && !triggered) { triggered = true; ptr.textContent = '↑ 새로고침'; }
+  }, {passive:true});
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    if (triggered) loadLibrary();
+    ptr.classList.remove('active');
+    ptr.textContent = '↓';
+    pulling = false;
+  });
+})();
+
+// ── UI 이벤트 ─────────────────────────────────────────────────────────
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  activeStatus = tab.dataset.status;
+  applyView();
+});
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSort = btn.dataset.sort;
+    applyView();
+  });
+});
+
+document.getElementById('chip-completed').addEventListener('click', function() {
+  onlyComplete = !onlyComplete;
+  this.classList.toggle('active', onlyComplete);
+  applyView();
+});
+
+document.getElementById('search').addEventListener('input', applyView);
+document.getElementById('btn-refresh').addEventListener('click', () => loadLibrary());
+document.getElementById('btn-stats').addEventListener('click', showStats);
+document.getElementById('stats-close').addEventListener('click', () => {
+  document.getElementById('stats-modal').classList.remove('open');
+});
+document.getElementById('stats-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+// ── 설정 ─────────────────────────────────────────────────────────────
+document.getElementById('btn-settings').addEventListener('click', () => {
+  document.getElementById('inp-url').value = localStorage.getItem(STORE_URL) || '';
+  document.getElementById('inp-key').value = localStorage.getItem(STORE_KEY) || '';
   document.getElementById('main').style.display = 'none';
   document.getElementById('setup').style.display = 'flex';
-  if (prefill) {
-    document.getElementById('inp-url').value = localStorage.getItem(STORE_URL) || '';
-    document.getElementById('inp-key').value = localStorage.getItem(STORE_KEY) || '';
-  }
-}
+});
 
-// ── 설정 저장 ──────────────────────────────────
 document.getElementById('setup-save').addEventListener('click', async () => {
-  const url = document.getElementById('inp-url').value.trim();
-  const key = document.getElementById('inp-key').value.trim();
-  const errEl = document.getElementById('setup-err');
-
-  if (!url || !key) { errEl.textContent = 'URL과 Key를 모두 입력하세요.'; return; }
+  const url    = document.getElementById('inp-url').value.trim();
+  const key    = document.getElementById('inp-key').value.trim();
+  const errEl  = document.getElementById('setup-err');
+  if (!url || !key)               { errEl.textContent = 'URL과 Key를 모두 입력하세요.'; return; }
   if (!url.startsWith('https://')) { errEl.textContent = 'URL은 https://로 시작해야 합니다.'; return; }
   errEl.textContent = '연결 확인 중...';
-
   try {
-    await fetchLibrary(url, key);
-  } catch (e) {
-    errEl.textContent = `연결 실패: ${e.message}. URL/Key를 확인하세요.`;
-    return;
-  }
-
+    const res = await fetch(`${url.replace(/\/+$/,'')}/rest/v1/manga_reading?select=key&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch(e) { errEl.textContent = `연결 실패: ${e.message}`; return; }
   localStorage.setItem(STORE_URL, url);
   localStorage.setItem(STORE_KEY, key);
   errEl.textContent = '';
   showMain();
 });
 
-// ── 버튼 이벤트 ────────────────────────────────
-document.getElementById('btn-refresh').addEventListener('click', loadLibrary);
-document.getElementById('btn-settings').addEventListener('click', () => showSetup(true));
+function showMain() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  loadLibrary(true);
+}
 
-// ── 엔트리포인트 ───────────────────────────────
+// ── 엔트리포인트 ─────────────────────────────────────────────────────
 if (localStorage.getItem(STORE_URL) && localStorage.getItem(STORE_KEY)) {
   showMain();
 } else {
-  showSetup(false);
+  document.getElementById('setup').style.display = 'flex';
 }
 </script>
 </body>
