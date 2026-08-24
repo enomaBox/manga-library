@@ -112,6 +112,15 @@ a.title:active{color:var(--accent)}
 .stat-card .lbl{font-size:12px;color:var(--sub);margin-top:2px}
 .stat-card.full{grid-column:1/-1}
 .modal-close{width:100%;margin-top:16px}
+
+/* ── 갱신 실패 배너 ── */
+/* fetch 실패 시 캐시를 조용히 계속 보여주면 옛 URL을 최신으로 오인하게 된다. 반드시 노출한다. */
+#stale{display:none;align-items:center;gap:8px;margin:0 0 8px;padding:9px 12px;border-radius:10px;
+  background:#7c2d12;color:#fed7aa;border:1px solid #9a3412;font-size:12px;line-height:1.45}
+#stale.show{display:flex}
+#stale .msg{flex:1;min-width:0}
+#stale button{flex-shrink:0;background:none;border:1px solid #c2410c;color:#fed7aa;
+  border-radius:7px;padding:4px 10px;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -162,6 +171,7 @@ a.title:active{color:var(--accent)}
   </header>
 
   <div id="ptr">↓</div>
+  <div id="stale"><span class="msg"></span><button id="stale-retry">다시 시도</button></div>
   <div class="list" id="list"></div>
 </div>
 
@@ -178,6 +188,7 @@ a.title:active{color:var(--accent)}
 const STORE_URL   = 'mss_supabase_url';
 const STORE_KEY   = 'mss_supabase_key';
 const STORE_CACHE = 'mss_cache';
+const STORE_CACHE_AT = 'mss_cache_at';   // 캐시를 마지막으로 채운 시각 — 갱신 실패 배너에 표시
 const META_KEY    = '__mss_meta';
 const SYNC_KEY    = '__mss_sync';
 
@@ -324,12 +335,30 @@ async function loadLibrary(fromCache = false) {
     const rows = await fetchLibrary();
     allRows = rows;
     localStorage.setItem(STORE_CACHE, JSON.stringify(rows));
+    try { localStorage.setItem(STORE_CACHE_AT, new Date().toISOString()); } catch {}
+    showStale(null);
     applyView();
   } catch (e) {
     if (!allRows.length) {
       listEl.innerHTML = `<div class="empty">불러오기 실패: ${esc(e.message)}</div>`;
+      showStale(null);
+    } else {
+      // 캐시가 있으면 화면은 그대로 두되, 옛 데이터임을 반드시 알린다.
+      // (이걸 숨기면 죽은 도메인 URL을 최신으로 오인하게 된다)
+      showStale(e.message);
     }
   }
+}
+
+// 갱신 실패 배너. msg=null이면 감춘다.
+function showStale(msg) {
+  const el = document.getElementById('stale');
+  if (!el) return;
+  if (!msg) { el.classList.remove('show'); return; }
+  const at  = localStorage.getItem(STORE_CACHE_AT);
+  const age = at ? relTime(at) : '시점 불명';
+  el.querySelector('.msg').textContent = `⚠ 갱신 실패 (${msg}) — ${age} 캐시를 표시 중입니다. 링크가 옛 주소일 수 있습니다.`;
+  el.classList.add('show');
 }
 
 // ── 통계 ────────────────────────────────────────────────────────────────
@@ -404,6 +433,7 @@ document.getElementById('chip-completed').addEventListener('click', function() {
 
 document.getElementById('search').addEventListener('input', applyView);
 document.getElementById('btn-refresh').addEventListener('click', () => loadLibrary());
+document.getElementById('stale-retry').addEventListener('click', () => loadLibrary());
 document.getElementById('btn-stats').addEventListener('click', showStats);
 document.getElementById('stats-close').addEventListener('click', () => {
   document.getElementById('stats-modal').classList.remove('open');
