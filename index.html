@@ -121,6 +121,54 @@ a.title:active{color:var(--accent)}
 #stale .msg{flex:1;min-width:0}
 #stale button{flex-shrink:0;background:none;border:1px solid #c2410c;color:#fed7aa;
   border-radius:7px;padding:4px 10px;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer}
+
+/* ── 토스트 ── */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);z-index:200;
+  background:var(--fg);color:var(--bg);padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  display:flex;gap:10px;align-items:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast button{background:none;border:1px solid currentColor;color:inherit;border-radius:7px;padding:3px 9px;
+  font-size:12px;font-family:inherit;font-weight:600;cursor:pointer;pointer-events:auto;flex-shrink:0}
+
+/* ── 바텀시트 공통 ── */
+.sheet-modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5);align-items:flex-end}
+.sheet-modal.open{display:flex}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:720px;margin:0 auto;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:86dvh;overflow-y:auto}
+.sheet h2{font-size:17px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet .sub{font-size:12px;color:var(--sub);margin-bottom:16px;line-height:1.5}
+.field{margin-bottom:16px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;padding:10px 0;font-size:13px;font-weight:600;font-family:inherit;background:none;color:var(--sub);border:none;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:#fff}
+.row-inline{display:flex;gap:8px;align-items:center}
+.row-inline input[type=number]{flex:1;padding:11px 14px;font-size:15px;font-family:inherit;
+  border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);outline:none}
+.btn-danger{width:100%;padding:11px;font-size:14px;font-weight:600;font-family:inherit;
+  background:none;color:var(--danger);border:1px solid var(--danger);border-radius:10px;cursor:pointer}
+.sheet-actions{display:flex;gap:8px;margin-top:12px}
+.sheet-actions>*{flex:1}
+
+/* ── 도메인 점검 ── */
+.dom-group{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.dom-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.dom-site{font-size:13px;font-weight:700;color:var(--accent)}
+.dom-warn{font-size:10px;font-weight:600;color:var(--st-paused);border:1px solid var(--st-paused);border-radius:5px;padding:1px 5px}
+.dom-all{margin-left:auto}
+.dom-row{display:flex;align-items:center;gap:8px;padding:5px 0}
+.dom-name{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dom-cnt{font-size:11px;color:var(--sub);flex-shrink:0}
+.dom-btn{flex-shrink:0;background:none;border:1px solid var(--line);color:var(--fg);
+  border-radius:7px;padding:5px 10px;font-size:12px;font-family:inherit;cursor:pointer}
+.dom-btn:disabled{opacity:.35;cursor:default}
+
+/* 카드 편집 진입 */
+.card-edit{background:none;border:none;color:var(--sub);font-size:19px;line-height:1;
+  padding:0 2px;cursor:pointer;align-self:flex-start;flex-shrink:0}
+.site-sel{padding:5px 8px;font-size:12px;font-family:inherit;border:1px solid var(--line);
+  border-radius:8px;background:var(--card);color:var(--fg)}
 </style>
 </head>
 <body>
@@ -149,6 +197,7 @@ a.title:active{color:var(--accent)}
     <div class="hdr-top">
       <h1>📚 만화 라이브러리</h1>
       <button class="icon-btn" id="btn-stats" title="통계">📊</button>
+      <button class="icon-btn" id="btn-domain" title="도메인 점검">🌐</button>
       <button class="icon-btn" id="btn-refresh" title="새로고침">↺</button>
       <button class="icon-btn" id="btn-settings" title="설정">⚙</button>
     </div>
@@ -166,6 +215,7 @@ a.title:active{color:var(--accent)}
         <button class="sort-btn" data-sort="chapter">화수</button>
       </div>
       <button class="chip" id="chip-completed">완결만</button>
+      <select class="site-sel" id="site-filter" title="사이트 필터"><option value="">모든 사이트</option></select>
     </div>
     <input class="search" type="search" id="search" placeholder="제목 검색" autocomplete="off">
   </header>
@@ -184,11 +234,68 @@ a.title:active{color:var(--accent)}
   </div>
 </div>
 
+<!-- 작품 편집 시트 -->
+<div class="sheet-modal" id="work-modal">
+  <div class="sheet">
+    <h2 id="work-title"></h2>
+    <div class="sub" id="work-sub"></div>
+
+    <div class="field">
+      <label>상태</label>
+      <div class="seg" id="work-status">
+        <button data-v="reading">읽는 중</button>
+        <button data-v="paused">중단</button>
+        <button data-v="done">완료</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>고정</label>
+      <div class="seg" id="work-pin">
+        <button data-v="1">📌 고정</button>
+        <button data-v="0">해제</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="work-ch">읽은 화수</label>
+      <div class="row-inline">
+        <input type="number" id="work-ch" min="0" step="1" inputmode="numeric">
+        <button class="btn" id="work-ch-save" style="flex:0 0 auto;padding:11px 18px">저장</button>
+      </div>
+    </div>
+
+    <button class="btn-danger" id="work-del">🗑 라이브러리에서 삭제</button>
+    <div class="sheet-actions"><button class="btn-ghost" id="work-close">닫기</button></div>
+  </div>
+</div>
+
+<!-- 도메인 점검 시트 -->
+<div class="sheet-modal" id="domain-modal">
+  <div class="sheet">
+    <h2>🌐 도메인 점검</h2>
+    <div class="sub">사이트별로 저장된 주소입니다. 옛 주소가 여러 종이면 [모두 변경]으로 한 번에 맞춥니다.<br>
+      바꿀 주소를 입력한 뒤 아래 목록에서 버튼을 누르세요.</div>
+    <div class="field">
+      <label for="dom-new">새 도메인</label>
+      <input type="text" id="dom-new" placeholder="wfwf490.com" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="dom-list"></div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" id="dom-undo">↩ 되돌리기</button>
+      <button class="btn-ghost" id="dom-close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
 const STORE_URL   = 'mss_supabase_url';
 const STORE_KEY   = 'mss_supabase_key';
 const STORE_CACHE = 'mss_cache';
 const STORE_CACHE_AT = 'mss_cache_at';   // 캐시를 마지막으로 채운 시각 — 갱신 실패 배너에 표시
+const STORE_UNDO  = 'mss_undo';          // 도메인 일괄 변경 직전 원본 (되돌리기용)
 const META_KEY    = '__mss_meta';
 const SYNC_KEY    = '__mss_sync';
 
@@ -237,7 +344,18 @@ function proxyThumb(url) {
 let allRows = [];
 let activeStatus = 'all';
 let activeSort   = 'recent';
+let activeSite   = '';
 let onlyComplete = false;
+
+// 유저스크립트와 같은 동기화 규약 (필드별 Last-Write-Wins).
+// sites.__mss_sync 의 *UpdatedAt 을 올리지 않으면 유저스크립트가 다음 pull에서 옛 값으로 되돌린다.
+const DATA_VERSION = 2;
+const SYNC_FIELDS = {
+  title:'titleUpdatedAt', chapter:'chapterUpdatedAt', sites:'sitesUpdatedAt',
+  pinned:'pinnedUpdatedAt', status:'statusUpdatedAt', series:'seriesUpdatedAt', meta:'metaUpdatedAt',
+};
+const HOST_PAT = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+const clone = v => JSON.parse(JSON.stringify(v));
 
 // ── 카드 렌더 ──────────────────────────────────────────────────────────
 function renderCard(row) {
@@ -280,6 +398,7 @@ function renderCard(row) {
     <div class="meta-row"><span class="chapter">${esc(chTxt)}</span>${stBadge}${seBadge}</div>
     <div class="sub-row"><span class="time">${esc(relTime(row.last_read))}</span><span class="links">${links}</span></div>
   </div>
+  <button class="card-edit" data-key="${esc(row.key)}" title="편집">⋯</button>
 </div>`;
 }
 
@@ -292,12 +411,15 @@ function applyView() {
   let rows = allRows;
   if (activeStatus !== 'all')  rows = rows.filter(r => r.status === activeStatus);
   if (onlyComplete)            rows = rows.filter(r => isCompletedRow(r));
+  if (activeSite)              rows = rows.filter(r => r.sites?.[activeSite]);
   if (q)                       rows = rows.filter(r => r.title.toLowerCase().includes(q));
 
   if (activeSort === 'title')   rows = [...rows].sort((a,b) => a.title.localeCompare(b.title,'ko'));
   if (activeSort === 'chapter') rows = [...rows].sort((a,b) => b.chapter - a.chapter);
 
-  statEl.textContent = `전체 ${allRows.length}편 · 표시 ${rows.length}편`;
+  const at = localStorage.getItem(STORE_CACHE_AT);
+  statEl.textContent = `전체 ${allRows.length}편 · 표시 ${rows.length}편`
+    + (at ? ` · 갱신 ${relTime(at)}` : '');
   listEl.innerHTML = rows.length
     ? rows.map(renderCard).join('')
     : `<div class="empty">${q ? '검색 결과가 없습니다.' : '작품이 없습니다.'}</div>`;
@@ -323,6 +445,7 @@ async function loadLibrary(fromCache = false) {
     const cached = localStorage.getItem(STORE_CACHE);
     if (cached) {
       allRows = JSON.parse(cached);
+      renderSiteFilter();
       applyView();
     } else {
       listEl.innerHTML = '<div class="loading">불러오는 중...</div>';
@@ -337,6 +460,7 @@ async function loadLibrary(fromCache = false) {
     localStorage.setItem(STORE_CACHE, JSON.stringify(rows));
     try { localStorage.setItem(STORE_CACHE_AT, new Date().toISOString()); } catch {}
     showStale(null);
+    renderSiteFilter();
     applyView();
   } catch (e) {
     if (!allRows.length) {
@@ -359,6 +483,265 @@ function showStale(msg) {
   const age = at ? relTime(at) : '시점 불명';
   el.querySelector('.msg').textContent = `⚠ 갱신 실패 (${msg}) — ${age} 캐시를 표시 중입니다. 링크가 옛 주소일 수 있습니다.`;
   el.classList.add('show');
+}
+
+// ── 토스트 ──────────────────────────────────────────────────────────────
+let toastTimer = null;
+function toast(msg, actionLabel, onAction) {
+  const el = document.getElementById('toast');
+  el.textContent = '';
+  el.appendChild(Object.assign(document.createElement('span'), { textContent: msg }));
+  if (actionLabel && onAction) {
+    const b = document.createElement('button');
+    b.textContent = actionLabel;
+    b.addEventListener('click', () => { hideToast(); onAction(); });
+    el.appendChild(b);
+  }
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, actionLabel ? 9000 : 3000);
+}
+function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+// 쓰기 동작 공통 래퍼 — 실패를 조용히 삼키지 않는다.
+async function guard(fn) {
+  try { await fn(); } catch (e) { toast(`❌ ${e.message}`); }
+}
+
+// ── Supabase 쓰기 ───────────────────────────────────────────────────────
+function supaBase() { return (localStorage.getItem(STORE_URL) || '').replace(/\/+$/,''); }
+
+async function supaSend(method, pathQuery, body, prefer) {
+  const key = localStorage.getItem(STORE_KEY);
+  const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+  if (method !== 'GET') {
+    headers.Prefer = prefer || (method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal');
+  }
+  const res = await fetch(`${supaBase()}/rest/v1/${pathQuery}`, {
+    method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0,120)}`);
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+// 유저스크립트의 normalizeSyncMeta + touchSync 와 동일한 규약으로 sites.__mss_sync 를 갱신한다.
+function touchRowSync(row, fields, at) {
+  const sites = (row.sites && typeof row.sites === 'object') ? row.sites : {};
+  const cur   = (sites[SYNC_KEY] && typeof sites[SYNC_KEY] === 'object') ? sites[SYNC_KEY] : {};
+  const s = { dataVersion: DATA_VERSION };
+  for (const k of Object.values(SYNC_FIELDS)) s[k] = cur[k] || row.last_read || at;
+  s.entryUpdatedAt = at;
+  for (const f of fields) { const k = SYNC_FIELDS[f]; if (k) s[k] = at; }
+  sites[SYNC_KEY] = s;
+  row.sites = sites;
+  return row;
+}
+
+// 유저스크립트 _pushOne 과 같은 열 구성으로 upsert 한다.
+function rowPayload(row) {
+  return {
+    key: row.key, title: row.title, chapter: row.chapter, last_read: row.last_read,
+    sites: row.sites, pinned: !!row.pinned, status: row.status || 'reading', series: row.series || null,
+  };
+}
+
+// 썸네일 data URI가 실려 큰 편이라 나눠 보낸다.
+async function saveRows(rows) {
+  for (let i = 0; i < rows.length; i += 15) {
+    await supaSend('POST', 'manga_reading', rows.slice(i, i + 15).map(rowPayload));
+  }
+}
+
+function persistCache() {
+  try { localStorage.setItem(STORE_CACHE, JSON.stringify(allRows)); } catch {}
+}
+
+async function updateWork(row, patch, fields) {
+  Object.assign(row, patch);
+  touchRowSync(row, fields, new Date().toISOString());
+  await saveRows([row]);
+  persistCache();
+  applyView();
+}
+
+// ── 삭제 (tombstone) ────────────────────────────────────────────────────
+async function fetchSettingValue(key) {
+  const r = await supaSend('GET', `manga_settings?key=eq.${encodeURIComponent(key)}&select=value`);
+  const v = Array.isArray(r) ? r[0]?.value : null;
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+}
+
+// 유저스크립트의 삭제 이력(복원 가능)과 같은 형태로 되돌린다.
+function rowToEntry(row) {
+  const sites = {};
+  for (const [k, v] of Object.entries(row.sites || {})) if (!k.startsWith('__')) sites[k] = v;
+  const e = {
+    title: row.title, chapter: row.chapter, lastRead: row.last_read, sites,
+    pinned: !!row.pinned, status: row.status || 'reading', series: row.series || null,
+  };
+  const sync = row.sites?.[SYNC_KEY];
+  if (sync && typeof sync === 'object') e.sync = clone(sync);
+  const meta = extractMeta(row.sites);
+  if (meta) e.meta = clone(meta);
+  return e;
+}
+
+// tombstone을 먼저 쓰고 행을 지운다. 순서를 뒤집으면 다른 기기의 pushAll이 작품을 되살린다.
+// tombstone만 남고 행이 남아도 유저스크립트 pullAll이 스스로 정리하므로 이 순서가 안전하다.
+async function deleteWork(row) {
+  const now = new Date().toISOString();
+  const tombs = await fetchSettingValue('deletedManga');
+  tombs[row.key] = { title: row.title || row.key, deletedAt: now, entry: rowToEntry(row) };
+  await supaSend('POST', 'manga_settings', [{ key: 'deletedManga', value: tombs, updated_at: now }]);
+  await supaSend('DELETE', `manga_reading?key=eq.${encodeURIComponent(row.key)}`);
+  allRows = allRows.filter(r => r.key !== row.key);
+  persistCache();
+  renderSiteFilter();
+  applyView();
+}
+
+// ── 사이트 필터 ─────────────────────────────────────────────────────────
+function renderSiteFilter() {
+  const sel = document.getElementById('site-filter');
+  const set = new Set();
+  allRows.forEach(r => visibleSites(r.sites).forEach(([s]) => set.add(s)));
+  const list = [...set].sort();
+  sel.innerHTML = ['<option value="">모든 사이트</option>',
+    ...list.map(s => `<option value="${esc(s)}">${esc(s)}</option>`)].join('');
+  if (!list.includes(activeSite)) activeSite = '';
+  sel.value = activeSite;
+}
+
+// ── 도메인 점검 / 변경 ──────────────────────────────────────────────────
+function collectDomains(rows) {
+  const bySite = new Map();
+  for (const r of rows) {
+    for (const [site, info] of visibleSites(r.sites)) {
+      if (!info?.domain) continue;
+      if (!bySite.has(site)) bySite.set(site, new Map());
+      const m = bySite.get(site);
+      m.set(info.domain, (m.get(info.domain) || 0) + 1);
+    }
+  }
+  return bySite;
+}
+
+function renderDomains() {
+  const el = document.getElementById('dom-list');
+  const bySite = collectDomains(allRows);
+  if (!bySite.size) { el.innerHTML = '<div class="empty" style="padding:24px 0">저장된 주소가 없습니다.</div>'; return; }
+  el.innerHTML = [...bySite.entries()].sort((a,b) => a[0].localeCompare(b[0])).map(([site, counts]) => {
+    const multi = counts.size > 1;
+    const rows = [...counts.entries()].sort((a,b) => b[1]-a[1]).map(([d,c]) => `
+      <div class="dom-row">
+        <div class="dom-name">${esc(d)}</div><div class="dom-cnt">${c}개</div>
+        <button class="dom-btn" data-site="${esc(site)}" data-domain="${esc(d)}">변경</button>
+      </div>`).join('');
+    return `<div class="dom-group">
+      <div class="dom-head">
+        <span class="dom-site">${esc(site)}</span>
+        ${multi ? `<span class="dom-warn">주소 ${counts.size}종</span>` : ''}
+        ${multi ? `<button class="dom-btn dom-all" data-site="${esc(site)}" data-all="1">모두 변경</button>` : ''}
+      </div>${rows}</div>`;
+  }).join('');
+}
+
+// hostname만 정확히 교체한다. 문자열 치환은 경로/쿼리를 깨뜨린다.
+function replaceHost(url, newHost) {
+  try { const u = new URL(url); u.hostname = newHost; return u.toString(); } catch { return url; }
+}
+
+// 유저스크립트 applyPlanItems + retargetMetaListUrl 과 같은 처리.
+// meta.listUrl 을 빼먹으면 sites 는 최신인데 작품정보만 죽은 호스트를 두드린다.
+function retargetRow(row, site, newDomain) {
+  const info = row.sites?.[site];
+  if (!info?.domain || info.domain === newDomain) return null;
+  const at = new Date().toISOString();
+  info.url = replaceHost(info.url, newDomain);
+  info.domain = newDomain;
+  info.updatedAt = at;
+  const fields = ['sites'];
+  const meta = row.sites?.[META_KEY];
+  if (meta && typeof meta === 'object' && meta.site === site && meta.listUrl) {
+    const nu = replaceHost(meta.listUrl, newDomain);
+    if (nu !== meta.listUrl) { meta.listUrl = nu; fields.push('meta'); }
+  }
+  touchRowSync(row, fields, at);
+  return row;
+}
+
+async function applyDomainChange(site, onlyDomain) {
+  const newDomain = document.getElementById('dom-new').value.trim().toLowerCase();
+  if (!newDomain)             { toast('❌ 새 도메인을 입력하세요'); return; }
+  if (!HOST_PAT.test(newDomain)) { toast('❌ 도메인 형식이 올바르지 않습니다 (호스트명만)'); return; }
+  if (onlyDomain === newDomain)  { toast('❌ 옛 주소와 새 주소가 같습니다'); return; }
+
+  const targets = allRows.filter(r => {
+    const d = r.sites?.[site]?.domain;
+    return d && d !== newDomain && (!onlyDomain || d === onlyDomain);
+  });
+  if (!targets.length) { toast(`✅ ${site}는 이미 모두 ${newDomain} 입니다`); return; }
+
+  const label = onlyDomain ? `${onlyDomain} → ${newDomain}` : `${site} 옛 주소 전체 → ${newDomain}`;
+  if (!confirm(`${label}\n대상: ${targets.length}개\n\n적용할까요?`)) return;
+
+  // 뷰어에는 유저스크립트 같은 자동 백업이 없다. 변경 전 원본을 남겨 되돌릴 수 있게 한다.
+  // rowPayload는 row.sites를 그대로 참조하므로 반드시 깊은 복사로 떠 둔다.
+  try {
+    localStorage.setItem(STORE_UNDO, JSON.stringify({
+      at: new Date().toISOString(), label, rows: targets.map(r => clone(rowPayload(r))),
+    }));
+  } catch {}
+
+  const changed = targets.map(r => retargetRow(r, site, newDomain)).filter(Boolean);
+  await saveRows(changed);
+  persistCache();
+  applyView();
+  renderDomains();
+  toast(`✅ ${changed.length}개 변경`, '되돌리기', () => guard(undoDomainChange));
+}
+
+async function undoDomainChange() {
+  let snap = null;
+  try { snap = JSON.parse(localStorage.getItem(STORE_UNDO) || 'null'); } catch {}
+  if (!snap?.rows?.length) { toast('되돌릴 내역이 없습니다'); return; }
+  if (!confirm(`되돌리기: ${snap.label}\n${snap.rows.length}개를 이전 상태로 복원합니다.`)) return;
+  // 되돌리기도 "가장 최근 쓰기"여야 유저스크립트가 다시 덮어쓰지 않는다.
+  const at = new Date().toISOString();
+  snap.rows.forEach(r => touchRowSync(r, ['sites','meta'], at));
+  await saveRows(snap.rows);
+  localStorage.removeItem(STORE_UNDO);
+  await loadLibrary();
+  toast('↩ 되돌렸습니다');
+}
+
+// ── 작품 편집 시트 ──────────────────────────────────────────────────────
+let workKey = null;
+function currentWork() { return allRows.find(r => r.key === workKey) || null; }
+
+function syncWorkSheet() {
+  const row = currentWork();
+  if (!row) return;
+  document.getElementById('work-title').textContent = row.title || row.key;
+  const sites = visibleSites(row.sites).map(([s]) => s).join(', ');
+  document.getElementById('work-sub').textContent = `${row.chapter}화 · ${sites || '사이트 없음'}`;
+  document.querySelectorAll('#work-status button')
+    .forEach(b => b.classList.toggle('on', (row.status || 'reading') === b.dataset.v));
+  document.querySelectorAll('#work-pin button')
+    .forEach(b => b.classList.toggle('on', String(row.pinned ? 1 : 0) === b.dataset.v));
+  document.getElementById('work-ch').value = row.chapter ?? 0;
+}
+
+function openWork(key) {
+  workKey = key;
+  if (!currentWork()) return;
+  syncWorkSheet();
+  document.getElementById('work-modal').classList.add('open');
+}
+function closeWork() {
+  document.getElementById('work-modal').classList.remove('open');
+  workKey = null;
 }
 
 // ── 통계 ────────────────────────────────────────────────────────────────
@@ -431,8 +814,96 @@ document.getElementById('chip-completed').addEventListener('click', function() {
   applyView();
 });
 
+document.getElementById('site-filter').addEventListener('change', function() {
+  activeSite = this.value;
+  applyView();
+});
+
 document.getElementById('search').addEventListener('input', applyView);
 document.getElementById('btn-refresh').addEventListener('click', () => loadLibrary());
+
+// 탭에 돌아왔을 때 1분 넘게 묵은 데이터면 조용히 다시 받는다 (캐시를 먼저 그려 깜빡임 없음).
+// 폰 브라우저는 탭을 suspend하므로 로드 시점에만 fetch하면 며칠 지난 화면을 그대로 보게 된다.
+// 이때 fetch는 실패한 게 아니라 아예 실행되지 않아 갱신 실패 배너도 뜨지 않는다.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (!localStorage.getItem(STORE_URL) || !localStorage.getItem(STORE_KEY)) return;
+  if (document.getElementById('main').style.display === 'none') return;
+  const at = Date.parse(localStorage.getItem(STORE_CACHE_AT) || '');
+  if (!at || Date.now() - at > 60_000) loadLibrary(true);
+});
+
+// ── 작품 편집 ────────────────────────────────────────────────────────
+document.getElementById('list').addEventListener('click', e => {
+  const btn = e.target.closest('.card-edit');
+  if (btn) openWork(btn.dataset.key);
+});
+
+document.getElementById('work-status').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const row = currentWork(); if (!row || (row.status || 'reading') === b.dataset.v) return;
+  guard(async () => {
+    await updateWork(row, { status: b.dataset.v }, ['status']);
+    syncWorkSheet();
+    toast('✅ 상태를 바꿨습니다');
+  });
+});
+
+document.getElementById('work-pin').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const row = currentWork(); if (!row) return;
+  const next = b.dataset.v === '1';
+  if (!!row.pinned === next) return;
+  guard(async () => {
+    await updateWork(row, { pinned: next }, ['pinned']);
+    syncWorkSheet();
+    toast(next ? '📌 고정했습니다' : '고정을 해제했습니다');
+  });
+});
+
+document.getElementById('work-ch-save').addEventListener('click', () => {
+  const row = currentWork(); if (!row) return;
+  const v = parseInt(document.getElementById('work-ch').value, 10);
+  if (!Number.isFinite(v) || v < 0) { toast('❌ 화수는 0 이상의 숫자여야 합니다'); return; }
+  if (v === row.chapter) { toast('변경 없음'); return; }
+  guard(async () => {
+    await updateWork(row, { chapter: v }, ['chapter']);
+    syncWorkSheet();
+    toast(`✅ ${v}화로 수정했습니다`);
+  });
+});
+
+document.getElementById('work-del').addEventListener('click', () => {
+  const row = currentWork(); if (!row) return;
+  if (!confirm(`"${row.title || row.key}"을(를) 라이브러리에서 삭제합니다.\n\n유저스크립트의 설정 → 🧰 → 🗑 삭제 이력에서 복원할 수 있습니다.`)) return;
+  guard(async () => {
+    await deleteWork(row);
+    closeWork();
+    toast('🗑 삭제했습니다 (삭제 이력에서 복원 가능)');
+  });
+});
+
+document.getElementById('work-close').addEventListener('click', closeWork);
+document.getElementById('work-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeWork();
+});
+
+// ── 도메인 점검 ──────────────────────────────────────────────────────
+document.getElementById('btn-domain').addEventListener('click', () => {
+  renderDomains();
+  document.getElementById('domain-modal').classList.add('open');
+});
+document.getElementById('dom-list').addEventListener('click', e => {
+  const b = e.target.closest('.dom-btn'); if (!b) return;
+  guard(() => applyDomainChange(b.dataset.site, b.dataset.all ? null : b.dataset.domain));
+});
+document.getElementById('dom-undo').addEventListener('click', () => guard(undoDomainChange));
+document.getElementById('dom-close').addEventListener('click', () => {
+  document.getElementById('domain-modal').classList.remove('open');
+});
+document.getElementById('domain-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
 document.getElementById('stale-retry').addEventListener('click', () => loadLibrary());
 document.getElementById('btn-stats').addEventListener('click', showStats);
 document.getElementById('stats-close').addEventListener('click', () => {
